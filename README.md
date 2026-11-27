@@ -180,7 +180,7 @@ El despliegue y el rollback forman parte del trabajo de AWS.
 | RF-04 adjuntos | Hecho sobre almacenamiento local; S3 con KMS está pendiente. |
 | RF-05 receta | Hecho; el lado de la farmacia es un stub hasta tener SQS. |
 | RF-06 historial del legado | Hecho. |
-| RF-07 interconsulta | Estados, alertas en cada cambio y la lista de seguimiento (`GET /api/interconsultas/pending`). |
+| RF-07 interconsulta | Estados, alertas en cada cambio y la lista de seguimiento (`GET /api/interconsultas/pending`): interconsultas no cerradas y sin movimiento durante un tiempo dado (24 h por defecto). |
 | RF-08 auditoría | Hecho, incluidas las solicitudes rechazadas. |
 | RF-09 modo degradado | Contrato del servidor hecho y probado; el cliente con la cola local no está construido. |
 | RF-10 indicadores | Hecho. |
@@ -284,6 +284,3 @@ el mismo paciente consultan cada una al legado.
 - Los atributos personalizados de Cognito llegan en el token que recibe la API; normalmente solo vienen en el ID token.
 - Las marcas de tiempo del legado están en `America/Bogota`.
 - Solo los especialistas recetan, y solo el especialista asignado atiende y cierra una interconsulta.
-- Los roles `auditor` y `network-manager` son nuevos; el enunciado nombra al "Gestor de red" y a "Auditoría" como actores
-  pero no dice cómo se autentican.
-- "Pendiente" para una interconsulta significa no cerrada y sin movimiento durante un tiempo dado (24 h por defecto).
