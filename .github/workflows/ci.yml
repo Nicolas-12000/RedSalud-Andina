@@ -25,7 +25,7 @@ jobs:
           cache: maven
       # Tests, reglas de módulos y de arquitectura, el reporte de auditoría versionado y la barrera de cobertura del 70 %.
       - run: ./mvnw -B -ntp verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: reports
