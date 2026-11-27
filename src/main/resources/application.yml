@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: redsalud-andina
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    # Recorre db/migration/<módulo>/ de forma recursiva. Las versiones llevan el espacio de nombres del módulo (ver README).
+    locations: classpath:db/migration
+    out-of-order: true
