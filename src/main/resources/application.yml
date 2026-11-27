@@ -24,6 +24,8 @@ spring:
       max-file-size: 20MB
       max-request-size: 20MB
 redsalud:
+  analytics:
+    pseudonym-key: ${ANALYTICS_PSEUDONYM_KEY}
   attachments:
     local-dir: ${java.io.tmpdir}/redsalud-attachments
   legado:

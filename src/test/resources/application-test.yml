@@ -8,3 +8,6 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: https://cognito-idp.test.amazonaws.com/test_pool
+redsalud:
+  analytics:
+    pseudonym-key: test-only-pseudonym-key
