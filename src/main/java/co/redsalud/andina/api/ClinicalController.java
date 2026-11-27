@@ -27,10 +27,15 @@ import co.redsalud.andina.episodio.EpisodeSyncService;
 import co.redsalud.andina.episodio.EpisodeView;
 import co.redsalud.andina.episodio.SyncEvent;
 import co.redsalud.andina.episodio.SyncResult;
+import co.redsalud.andina.receta.PrescriptionService;
+import co.redsalud.andina.receta.PrescriptionView;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
-/** Clinical entry point: episodes, offline sync and attachments. Every read needs an access reason. */
+/** Clinical entry point: episodes, offline sync, attachments and prescriptions. Every read needs an access reason. */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -41,6 +46,10 @@ class ClinicalController {
 	private final EpisodeSyncService syncService;
 	private final EpisodeService episodeService;
 	private final AttachmentService attachmentService;
+	private final PrescriptionService prescriptionService;
+
+	record SavePrescriptionRequest(@NotNull UUID episodeId, @NotNull UUID patientId, @NotBlank @Size(max = 4000) String content) {
+	}
 
 	@PostMapping("/sync/events")
 	List<SyncResult> sync(@RequestBody List<@Valid SyncEvent> events) {
@@ -67,5 +76,20 @@ class ClinicalController {
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						ContentDisposition.attachment().filename(attachment.fileName()).build().toString())
 				.body(attachment.content());
+	}
+
+	@PutMapping("/prescriptions/{prescriptionId}")
+	PrescriptionView saveDraft(@PathVariable UUID prescriptionId, @Valid @RequestBody SavePrescriptionRequest request) {
+		return prescriptionService.saveDraft(prescriptionId, request.episodeId(), request.patientId(), request.content());
+	}
+
+	@PostMapping("/prescriptions/{prescriptionId}/sign")
+	PrescriptionView sign(@PathVariable UUID prescriptionId) {
+		return prescriptionService.sign(prescriptionId);
+	}
+
+	@GetMapping("/prescriptions/{prescriptionId}")
+	PrescriptionView prescription(@PathVariable UUID prescriptionId, @RequestHeader(REASON_HEADER) String reason) {
+		return prescriptionService.read(prescriptionId, reason);
 	}
 }

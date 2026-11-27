@@ -10,6 +10,8 @@ import co.redsalud.andina.agenda.SlotNotFoundException;
 import co.redsalud.andina.auditoria.ReasonRequiredException;
 import co.redsalud.andina.episodio.EpisodeConflictException;
 import co.redsalud.andina.episodio.EpisodeNotFoundException;
+import co.redsalud.andina.receta.PrescriptionImmutableException;
+import co.redsalud.andina.receta.PrescriptionNotFoundException;
 
 /** The one place where module exceptions become HTTP responses. */
 @RestControllerAdvice
@@ -37,6 +39,16 @@ class ApiExceptionHandler {
 
 	@ExceptionHandler(EpisodeNotFoundException.class)
 	ProblemDetail episodeNotFound(EpisodeNotFoundException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler(PrescriptionImmutableException.class)
+	ProblemDetail prescriptionImmutable(PrescriptionImmutableException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+	}
+
+	@ExceptionHandler(PrescriptionNotFoundException.class)
+	ProblemDetail prescriptionNotFound(PrescriptionNotFoundException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 	}
 }

@@ -11,6 +11,9 @@ spring:
     # Recorre db/migration/<módulo>/ de forma recursiva. Las versiones llevan el espacio de nombres del módulo (ver README).
     locations: classpath:db/migration
     out-of-order: true
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
   security:
     oauth2:
       resourceserver:
