@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import co.redsalud.andina.identidad.CurrentUser;
@@ -37,6 +39,30 @@ public class AuditTrail {
 			String discardedValue) {
 		store.append(new AuditRecord(UUID.randomUUID(), AuditKind.FIELD_CONFLICT, currentActor(), Instant.now(),
 				resourceType, resourceId, null, fieldName, keptValue, discardedValue));
+	}
+
+	/** Records a refused request. Works for callers without a recognized role, so it reads the subject straight from the token. */
+	public void recordAccessDenied(String resource, String claimedReason) {
+		var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		if (!(principal instanceof Jwt jwt)) {
+			return;
+		}
+		String reason = claimedReason == null || claimedReason.isBlank() ? null : truncate(claimedReason.strip(), 500);
+		store.append(new AuditRecord(UUID.randomUUID(), AuditKind.ACCESS_DENIED, actorOf(jwt.getSubject()),
+				Instant.now(), "http-request", truncate(resource, 128), reason, null, null, null));
+	}
+
+	/** Cognito subjects are UUIDs; anything else still gets a stable actor id so a denial is never lost or turned into a 500. */
+	private static UUID actorOf(String subject) {
+		try {
+			return UUID.fromString(subject);
+		} catch (IllegalArgumentException e) {
+			return UUID.nameUUIDFromBytes(subject.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		}
+	}
+
+	private static String truncate(String text, int max) {
+		return text.length() <= max ? text : text.substring(0, max);
 	}
 
 	private static UUID currentActor() {
