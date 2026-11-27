@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import co.redsalud.andina.agenda.AgendaConflictException;
 import co.redsalud.andina.agenda.SlotNotFoundException;
 import co.redsalud.andina.auditoria.ReasonRequiredException;
+import co.redsalud.andina.episodio.EpisodeConflictException;
+import co.redsalud.andina.episodio.EpisodeNotFoundException;
 
 /** The one place where module exceptions become HTTP responses. */
 @RestControllerAdvice
@@ -25,6 +27,16 @@ class ApiExceptionHandler {
 
 	@ExceptionHandler(SlotNotFoundException.class)
 	ProblemDetail notFound(SlotNotFoundException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler(EpisodeConflictException.class)
+	ProblemDetail episodeConflict(EpisodeConflictException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+	}
+
+	@ExceptionHandler(EpisodeNotFoundException.class)
+	ProblemDetail episodeNotFound(EpisodeNotFoundException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 	}
 }

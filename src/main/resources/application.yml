@@ -16,3 +16,10 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${COGNITO_ISSUER_URI}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+redsalud:
+  attachments:
+    local-dir: ${java.io.tmpdir}/redsalud-attachments
