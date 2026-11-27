@@ -3,3 +3,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/andina
     username: ${DB_USER:andina}
     password: ${DB_PASSWORD:andina}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Valor de relleno: el decodificador lo resuelve de forma perezosa, así que dev arranca sin un pool real.
+          issuer-uri: ${COGNITO_ISSUER_URI:https://cognito-idp.REGION.amazonaws.com/POOL_ID}

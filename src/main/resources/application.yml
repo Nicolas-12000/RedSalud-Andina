@@ -11,3 +11,8 @@ spring:
     # Recorre db/migration/<módulo>/ de forma recursiva. Las versiones llevan el espacio de nombres del módulo (ver README).
     locations: classpath:db/migration
     out-of-order: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${COGNITO_ISSUER_URI}
