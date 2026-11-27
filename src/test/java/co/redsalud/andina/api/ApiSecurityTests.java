@@ -19,6 +19,7 @@ class ApiSecurityTests {
 
 	@Test
 	void everyApiRouteRequiresAToken() throws Exception {
+		mockMvc.perform(get("/api/agenda/slots").param("specialty", "cardiology")).andExpect(status().isUnauthorized());
 		mockMvc.perform(get("/api/audit/resources/episode/x/reads")).andExpect(status().isUnauthorized());
 	}
 }
