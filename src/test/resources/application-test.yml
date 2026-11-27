@@ -11,3 +11,7 @@ spring:
 redsalud:
   analytics:
     pseudonym-key: test-only-pseudonym-key
+management:
+  tracing:
+    sampling:
+      probability: 0.0

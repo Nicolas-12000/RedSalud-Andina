@@ -23,6 +23,7 @@ import co.redsalud.andina.episodio.internal.ProcessedEventRepository;
 import co.redsalud.andina.identidad.AccessPolicy;
 import co.redsalud.andina.identidad.CareRelationships;
 import co.redsalud.andina.identidad.CurrentUser;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -43,6 +44,7 @@ public class EpisodeSyncService {
 	private final AccessPolicy accessPolicy;
 	private final CareRelationships careRelationships;
 	private final ApplicationEventPublisher events;
+	private final MeterRegistry meters;
 
 	@PreAuthorize("hasAnyRole('RURAL_DOCTOR','SPECIALIST')")
 	@Transactional
@@ -61,6 +63,7 @@ public class EpisodeSyncService {
 				blockedAggregates.add(event.aggregateId());
 			}
 			results.add(result);
+			meters.counter("redsalud.sync.events", "status", result.status().name()).increment();
 		}
 		return results;
 	}
