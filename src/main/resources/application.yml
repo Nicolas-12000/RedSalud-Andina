@@ -26,3 +26,9 @@ spring:
 redsalud:
   attachments:
     local-dir: ${java.io.tmpdir}/redsalud-attachments
+  legado:
+    # El legado es una extracción nocturna, así que un día es el TTL natural del read model.
+    view-ttl: PT24H
+    # Tope de la consulta directa (objetivo: <= 6 s).
+    direct-timeout: PT6S
+    stale-retention: P7D

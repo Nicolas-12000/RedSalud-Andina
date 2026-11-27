@@ -27,6 +27,8 @@ import co.redsalud.andina.episodio.EpisodeSyncService;
 import co.redsalud.andina.episodio.EpisodeView;
 import co.redsalud.andina.episodio.SyncEvent;
 import co.redsalud.andina.episodio.SyncResult;
+import co.redsalud.andina.legado.LegacyHistoryService;
+import co.redsalud.andina.legado.PatientHistory;
 import co.redsalud.andina.receta.PrescriptionService;
 import co.redsalud.andina.receta.PrescriptionView;
 import jakarta.validation.Valid;
@@ -35,7 +37,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
-/** Clinical entry point: episodes, offline sync, attachments and prescriptions. Every read needs an access reason. */
+/** Clinical entry point: episodes, offline sync, attachments, prescriptions and the legacy history. Every read needs an access reason. */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -47,6 +49,7 @@ class ClinicalController {
 	private final EpisodeService episodeService;
 	private final AttachmentService attachmentService;
 	private final PrescriptionService prescriptionService;
+	private final LegacyHistoryService legacyHistoryService;
 
 	record SavePrescriptionRequest(@NotNull UUID episodeId, @NotNull UUID patientId, @NotBlank @Size(max = 4000) String content) {
 	}
@@ -91,5 +94,15 @@ class ClinicalController {
 	@GetMapping("/prescriptions/{prescriptionId}")
 	PrescriptionView prescription(@PathVariable UUID prescriptionId, @RequestHeader(REASON_HEADER) String reason) {
 		return prescriptionService.read(prescriptionId, reason);
+	}
+
+	@GetMapping("/patients/{patientId}/legacy-history")
+	ResponseEntity<PatientHistory> legacyHistory(@PathVariable UUID patientId, @RequestHeader(REASON_HEADER) String reason) {
+		PatientHistory history = legacyHistoryService.read(patientId, reason);
+		return ResponseEntity.ok()
+				.header("X-Data-Freshness", history.freshAt().toString())
+				.header("X-Data-Expires-At", history.expiresAt().toString())
+				.header("X-Data-Source", history.source().name())
+				.body(history);
 	}
 }

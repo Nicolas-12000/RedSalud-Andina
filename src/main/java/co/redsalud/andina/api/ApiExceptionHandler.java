@@ -13,6 +13,9 @@ import co.redsalud.andina.episodio.EpisodeConflictException;
 import co.redsalud.andina.episodio.EpisodeNotFoundException;
 import co.redsalud.andina.interconsulta.ConsultConflictException;
 import co.redsalud.andina.interconsulta.ConsultNotFoundException;
+import co.redsalud.andina.legado.LegacyTranslationException;
+import co.redsalud.andina.legado.LegacyUnavailableException;
+import co.redsalud.andina.legado.PatientNotInLegacyException;
 import co.redsalud.andina.receta.PrescriptionImmutableException;
 import co.redsalud.andina.receta.PrescriptionNotFoundException;
 
@@ -63,5 +66,20 @@ class ApiExceptionHandler {
 	@ExceptionHandler(ConsultNotFoundException.class)
 	ProblemDetail consultNotFound(ConsultNotFoundException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler(LegacyUnavailableException.class)
+	ProblemDetail legacyUnavailable(LegacyUnavailableException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+	}
+
+	@ExceptionHandler(PatientNotInLegacyException.class)
+	ProblemDetail patientNotInLegacy(PatientNotInLegacyException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler(LegacyTranslationException.class)
+	ProblemDetail legacyTranslation(LegacyTranslationException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, ex.getMessage());
 	}
 }
