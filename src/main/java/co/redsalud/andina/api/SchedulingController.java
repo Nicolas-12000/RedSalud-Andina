@@ -20,13 +20,16 @@ import co.redsalud.andina.agenda.BookingView;
 import co.redsalud.andina.agenda.SlotService;
 import co.redsalud.andina.agenda.SlotView;
 import co.redsalud.andina.identidad.CurrentUser;
+import co.redsalud.andina.interconsulta.AlertView;
+import co.redsalud.andina.interconsulta.ConsultService;
+import co.redsalud.andina.interconsulta.ConsultView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
-/** Scheduling entry point: availability and bookings. Single-module calls go straight to the services. */
+/** Scheduling entry point: availability, bookings and interconsultas. Single-module calls go straight to the services. */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -34,6 +37,8 @@ class SchedulingController {
 
 	private final SlotService slotService;
 	private final BookingService bookingService;
+	private final ConsultService consultService;
+	private final ConsultationOrchestrator consultationOrchestrator;
 
 	record CreateSlotRequest(@NotNull Instant startAt, @NotNull Instant endAt) {
 
@@ -41,6 +46,12 @@ class SchedulingController {
 		boolean isEndAfterStart() {
 			return startAt == null || endAt == null || endAt.isAfter(startAt);
 		}
+	}
+
+	record RequestConsultRequest(@NotNull UUID episodeId, @NotNull UUID patientId, @NotBlank String specialty) {
+	}
+
+	record ScheduleConsultRequest(@NotNull UUID bookingId, @NotNull UUID slotId) {
 	}
 
 	record BookSlotRequest(@NotNull UUID slotId, @NotNull UUID patientId) {
@@ -62,5 +73,42 @@ class SchedulingController {
 	BookingView book(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID bookingId,
 			@Valid @RequestBody BookSlotRequest request) {
 		return bookingService.book(bookingId, request.slotId(), request.patientId(), UUID.fromString(jwt.getSubject()));
+	}
+
+	@PutMapping("/interconsultas/{consultId}")
+	ConsultView requestConsult(@PathVariable UUID consultId, @Valid @RequestBody RequestConsultRequest request) {
+		return consultService.request(consultId, request.episodeId(), request.patientId(), request.specialty());
+	}
+
+	/** Books the slot and moves the interconsulta to SCHEDULED in one step. */
+	@PostMapping("/interconsultas/{consultId}/schedule")
+	ConsultView scheduleConsult(@PathVariable UUID consultId, @Valid @RequestBody ScheduleConsultRequest request) {
+		return consultationOrchestrator.schedule(consultId, request.bookingId(), request.slotId());
+	}
+
+	@PostMapping("/interconsultas/{consultId}/attend")
+	ConsultView attendConsult(@PathVariable UUID consultId) {
+		return consultService.attend(consultId);
+	}
+
+	@PostMapping("/interconsultas/{consultId}/close")
+	ConsultView closeConsult(@PathVariable UUID consultId) {
+		return consultService.close(consultId);
+	}
+
+	/** Interconsultas without movement for {@code olderThan} (ISO-8601 duration, default 24 h). */
+	@GetMapping("/interconsultas/pending")
+	List<ConsultView> pendingConsults(@RequestParam(defaultValue = "PT24H") java.time.Duration olderThan) {
+		return consultService.pending(olderThan);
+	}
+
+	@GetMapping("/interconsultas/alerts")
+	List<AlertView> myAlerts() {
+		return consultService.myAlerts();
+	}
+
+	@GetMapping("/interconsultas/{consultId}")
+	ConsultView consult(@PathVariable UUID consultId) {
+		return consultService.get(consultId);
 	}
 }

@@ -1,5 +1,6 @@
 package co.redsalud.andina.api;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,6 +11,8 @@ import co.redsalud.andina.agenda.SlotNotFoundException;
 import co.redsalud.andina.auditoria.ReasonRequiredException;
 import co.redsalud.andina.episodio.EpisodeConflictException;
 import co.redsalud.andina.episodio.EpisodeNotFoundException;
+import co.redsalud.andina.interconsulta.ConsultConflictException;
+import co.redsalud.andina.interconsulta.ConsultNotFoundException;
 import co.redsalud.andina.receta.PrescriptionImmutableException;
 import co.redsalud.andina.receta.PrescriptionNotFoundException;
 
@@ -49,6 +52,16 @@ class ApiExceptionHandler {
 
 	@ExceptionHandler(PrescriptionNotFoundException.class)
 	ProblemDetail prescriptionNotFound(PrescriptionNotFoundException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler({ ConsultConflictException.class, OptimisticLockingFailureException.class })
+	ProblemDetail consultConflict(RuntimeException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+	}
+
+	@ExceptionHandler(ConsultNotFoundException.class)
+	ProblemDetail consultNotFound(ConsultNotFoundException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
 	}
 }
