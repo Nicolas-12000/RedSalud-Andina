@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Generated local signing key and short-lived Postman tokens
+.local-jwt/
+postman/*.local.postman_environment.json

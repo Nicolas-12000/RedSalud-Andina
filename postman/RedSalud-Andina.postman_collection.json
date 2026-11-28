@@ -1,0 +1,1112 @@
+{
+  "info": {
+    "_postman_id": "fa7e663b-e241-4a72-8a90-02dc4a760d86",
+    "name": "RedSalud Andina - API",
+    "description": "Pruebas ordenadas de RedSalud Andina: seguridad, episodios, agenda, interconsultas, recetas, legado, auditoría y analítica. Ver postman/README.md. JWT local: ejecutar scripts/postman-jwt.mjs --serve y usar perfiles dev,postman. Para Cognito usar el ambiente vacío con JWT reales.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{ruralDoctorToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Reiniciar los datos de negocio al comenzar cada ejecución completa.",
+          "if (pm.info.requestName === 'Health público responde UP') {",
+          "  ['episodeId','openEventId','bookingId','consultId','prescriptionId','attachmentId','directBookingId','slotStart','slotEnd','slotId','directSlotId','openedAt'].forEach(k => pm.collectionVariables.unset(k));",
+          "}",
+          "const ids = ['patientId', 'episodeId', 'openEventId', 'bookingId', 'consultId', 'prescriptionId'];",
+          "ids.forEach(name => {",
+          "  if (!pm.collectionVariables.get(name)) {",
+          "    pm.collectionVariables.set(name, pm.variables.replaceIn('{{$guid}}'));",
+          "  }",
+          "});",
+          "if (!pm.collectionVariables.get('slotStart')) {",
+          "  const start = new Date(Date.now() + 24 * 60 * 60 * 1000);",
+          "  const end = new Date(start.getTime() + 60 * 60 * 1000);",
+          "  pm.collectionVariables.set('slotStart', start.toISOString());",
+          "  pm.collectionVariables.set('slotEnd', end.toISOString());",
+          "}",
+          "if (!pm.collectionVariables.get('openedAt')) pm.collectionVariables.set('openedAt', new Date().toISOString());",
+          "if (!pm.collectionVariables.get('attachmentId')) pm.collectionVariables.set('attachmentId', pm.variables.replaceIn('{{$guid}}'));",
+          "if (!pm.collectionVariables.get('directBookingId')) pm.collectionVariables.set('directBookingId', pm.variables.replaceIn('{{$guid}}'));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "patientId",
+      "value": ""
+    },
+    {
+      "key": "episodeId",
+      "value": ""
+    },
+    {
+      "key": "openEventId",
+      "value": ""
+    },
+    {
+      "key": "slotId",
+      "value": ""
+    },
+    {
+      "key": "slotStart",
+      "value": ""
+    },
+    {
+      "key": "slotEnd",
+      "value": ""
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    },
+    {
+      "key": "consultId",
+      "value": ""
+    },
+    {
+      "key": "prescriptionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Salud y seguridad",
+      "item": [
+        {
+          "name": "Health público responde UP",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "La sonda de salud no requiere autenticación."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Aplicación UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Endpoint protegido sin token devuelve 401",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/agenda/slots?specialty={{specialty}}",
+            "description": "Comprueba que la API no acepte peticiones anónimas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rol incorrecto en analítica devuelve 403",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/analytics/centers",
+            "description": "Un médico rural autenticado no tiene permisos de gestor de red."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Episodio clínico",
+      "item": [
+        {
+          "name": "Abrir episodio por sincronización",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"eventId\": \"{{openEventId}}\",\n    \"aggregateId\": \"{{episodeId}}\",\n    \"sequence\": 0,\n    \"type\": \"EPISODE_OPENED\",\n    \"occurredAt\": \"{{openedAt}}\",\n    \"patientId\": \"{{patientId}}\"\n  }\n]"
+            },
+            "url": "{{baseUrl}}/api/sync/events"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Evento aplicado', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(body[0].status).to.eql('APPLIED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reenviar el mismo evento es idempotente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"eventId\": \"{{openEventId}}\",\n    \"aggregateId\": \"{{episodeId}}\",\n    \"sequence\": 0,\n    \"type\": \"EPISODE_OPENED\",\n    \"occurredAt\": \"{{openedAt}}\",\n    \"patientId\": \"{{patientId}}\"\n  }\n]"
+            },
+            "url": "{{baseUrl}}/api/sync/events"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Sigue aplicado sin duplicar', () => pm.expect(pm.response.json()[0].status).to.eql('APPLIED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leer episodio con motivo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Atención de prueba Postman"
+              }
+            ],
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Es el episodio creado', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('episodeId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leer episodio sin motivo devuelve 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Agenda e interconsulta",
+      "item": [
+        {
+          "name": "Especialista crea un cupo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startAt\": \"{{slotStart}}\",\n  \"endAt\": \"{{slotEnd}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/agenda/slots"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cupo creado', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.be.a('string');",
+                  "  pm.collectionVariables.set('slotId', body.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar cupos disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/agenda/slots?specialty={{specialty}}&size=50"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Devuelve una lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Médico rural solicita interconsulta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episodeId\": \"{{episodeId}}\",\n  \"patientId\": \"{{patientId}}\",\n  \"specialty\": \"{{specialty}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado REQUESTED', () => pm.expect(pm.response.json().status).to.eql('REQUESTED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Programar interconsulta y reservar cupo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"slotId\": \"{{slotId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}/schedule"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado SCHEDULED', () => pm.expect(pm.response.json().status).to.eql('SCHEDULED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Especialista atiende interconsulta",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}/attend"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado ATTENDED', () => pm.expect(pm.response.json().status).to.eql('ATTENDED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Especialista cierra interconsulta",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}/close"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado CLOSED', () => pm.expect(pm.response.json().status).to.eql('CLOSED'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar interconsulta",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Especialista consulta sus alertas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interconsultas/alerts",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestor consulta pendientes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/interconsultas/pending?olderThan=PT0S",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{networkManagerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear segundo cupo para reserva directa",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/agenda/slots",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startAt\": \"{{directStart}}\",\n  \"endAt\": \"{{directEnd}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('directStart', new Date(Date.parse(pm.collectionVariables.get('slotStart')) + 7200000).toISOString());",
+                  "pm.variables.set('directEnd', new Date(Date.parse(pm.collectionVariables.get('slotEnd')) + 7200000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('directSlotId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paciente reserva cupo para sí mismo",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/agenda/bookings/{{directBookingId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patientToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotId\": \"{{directSlotId}}\",\n  \"patientId\": \"{{patientId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Receta",
+      "item": [
+        {
+          "name": "Especialista crea borrador",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episodeId\": \"{{episodeId}}\",\n  \"patientId\": \"{{patientId}}\",\n  \"content\": \"Contenido ficticio para prueba técnica; sin indicación clínica\"\n}"
+            },
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado DRAFT', () => pm.expect(pm.response.json().status).to.eql('DRAFT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Especialista firma receta",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}/sign"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Receta firmada con hash', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('SIGNED');",
+                  "  pm.expect(body.contentHash).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Leer receta con motivo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{specialistToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Seguimiento de tratamiento"
+              }
+            ],
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Devuelve la receta firmada', () => pm.expect(pm.response.json().status).to.eql('SIGNED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Legado, auditoría y analítica",
+      "item": [
+        {
+          "name": "Consultar historial legado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Antecedentes para interconsulta"
+              }
+            ],
+            "url": "{{baseUrl}}/api/patients/{{patientId}}/legacy-history"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye fuente y frescura', () => {",
+                  "  pm.expect(pm.response.headers.get('X-Data-Source')).to.be.a('string');",
+                  "  pm.expect(pm.response.headers.get('X-Data-Freshness')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Auditor consulta quién leyó el episodio",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auditorToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/audit/resources/episode/{{episodeId}}/reads"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Reporte determinista', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.reportVersion).to.eql('1');",
+                  "  pm.expect(body.contentHash).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.reads).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestor consulta indicadores",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{networkManagerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/analytics/centers"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Devuelve una lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Paciente y controles de acceso",
+      "item": [
+        {
+          "name": "Paciente consulta su episodio",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Prueba funcional Postman"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patientToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paciente consulta su receta",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Prueba funcional Postman"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patientToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Auditor no puede leer datos clínicos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Prueba funcional Postman"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{auditorToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paciente no puede firmar recetas",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}/sign",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{patientToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Médico rural no puede consultar métricas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/metrics",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestor consulta métricas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/metrics",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{networkManagerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestor consulta info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/info",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{networkManagerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestor consulta Prometheus",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/prometheus",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{networkManagerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Adjuntos (manual: seleccionar archivo antes de enviar)",
+      "item": [
+        {
+          "name": "Subir adjunto (seleccionar archivo local)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/episodes/{{episodeId}}/attachments/{{attachmentId}}",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Descargar adjunto",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/attachments/{{attachmentId}}",
+            "header": [
+              {
+                "key": "X-Access-Reason",
+                "value": "Prueba funcional Postman"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

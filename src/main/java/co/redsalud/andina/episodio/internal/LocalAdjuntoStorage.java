@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import co.redsalud.andina.episodio.AdjuntoStorage;
 
 @Component
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "postman" })
 class LocalAdjuntoStorage implements AdjuntoStorage {
 
 	private final Path baseDir;

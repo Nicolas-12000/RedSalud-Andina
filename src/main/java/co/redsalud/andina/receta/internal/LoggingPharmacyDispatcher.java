@@ -8,7 +8,7 @@ import co.redsalud.andina.receta.PrescriptionSigned;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "postman" })
 @Slf4j
 class LoggingPharmacyDispatcher implements PharmacyDispatcher {
 
