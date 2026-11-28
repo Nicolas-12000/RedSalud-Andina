@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 
 /** Local append-only store for dev and test. The S3 Object Lock implementation replaces it in prod. */
 @Component
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "postman" })
 @RequiredArgsConstructor
 class DatabaseAuditStore implements AuditStore {
 

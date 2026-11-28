@@ -2,14 +2,25 @@
 
 ## Preparación local
 
-Requisitos: Java 21, Node.js y PostgreSQL (por ejemplo, el docker-compose.yml del proyecto).
+Requisitos: Java 21, Node.js y Docker.
 Ejecutar desde la raíz de RedSalud-Andina.
+
+En macOS con `openjdk@21` instalado por Homebrew, seleccionar Java 21 en cada
+terminal que vaya a ejecutar Maven:
+
+```sh
+export JAVA_HOME="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
+```
 
 1. Levantar PostgreSQL:
 
    ```sh
    docker compose up -d postgres
    ```
+
+   Esta base es exclusiva del proyecto: se publica solo en `127.0.0.1:55432`, usa
+   la base `redsalud_postman` y no toca ningún PostgreSQL que escuche en `5432`.
+   Esperar a que aparezca como saludable con `docker compose ps`.
 
 2. En una terminal, generar los JWT y mantener disponible su clave pública:
 
@@ -27,12 +38,14 @@ Ejecutar desde la raíz de RedSalud-Andina.
 3. En otra terminal, iniciar la app:
 
    ```sh
-   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,postman
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=postman
    ```
 
    El perfil `postman` acepta exclusivamente el emisor local configurado. Mantiene
-   la validación de firma, emisor, vencimiento y las reglas de autorización. Se usa
-   junto a `dev` para la base de datos y la configuración local. No activarlo en despliegues.
+   la validación de firma, emisor, vencimiento y las reglas de autorización. También
+   configura la base aislada en el puerto `55432` y la API en `8080`. No activarlo
+   en despliegues. Si `8080` estuviera ocupado, iniciar con `SERVER_PORT=8082` y cambiar
+   `baseUrl` en el ambiente Postman al mismo puerto.
 
 4. Importar estos dos archivos en Postman y seleccionar el ambiente local:
 
@@ -71,11 +84,3 @@ El token debe incluir los grupos y atributos usados por `CurrentUser`.
 El backend no tiene un endpoint de login ni puede emitir un JWT de Cognito sin su proveedor.
 
 Referencia: https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html
-
-## Alcance de la verificación
-
-Se verificaron los JSON, los scripts de Postman, la cobertura de rutas de los cuatro
-controladores y las firmas RS256 de los cinco JWT. No se ejecutó la colección contra
-la app en este entorno: no permite abrir el puerto 9090 ni acceder a Docker, y el Java
-disponible es 17 en vez de 21. Ejecutar Runner con los pasos anteriores para validar
-las respuestas HTTP y la integración con la base de datos.

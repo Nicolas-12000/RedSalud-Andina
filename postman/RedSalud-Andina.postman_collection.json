@@ -441,7 +441,7 @@
           "name": "Consultar interconsulta",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/interconsultas/{{consultId}}",
+            "url": "{{baseUrl}}/api/interconsultas/{{consultId}}",
             "header": []
           },
           "event": [
@@ -460,7 +460,7 @@
           "name": "Especialista consulta sus alertas",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/interconsultas/alerts",
+            "url": "{{baseUrl}}/api/interconsultas/alerts",
             "header": [],
             "auth": {
               "type": "bearer",
@@ -489,7 +489,7 @@
           "name": "Gestor consulta pendientes",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/interconsultas/pending?olderThan=PT0S",
+            "url": "{{baseUrl}}/api/interconsultas/pending?olderThan=PT0S",
             "header": [],
             "auth": {
               "type": "bearer",
@@ -518,7 +518,7 @@
           "name": "Crear segundo cupo para reserva directa",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/agenda/slots",
+            "url": "{{baseUrl}}/api/agenda/slots",
             "header": [
               {
                 "key": "Content-Type",
@@ -567,7 +567,7 @@
           "name": "Paciente reserva cupo para sí mismo",
           "request": {
             "method": "PUT",
-            "url": "{{baseUrl}}/agenda/bookings/{{directBookingId}}",
+            "url": "{{baseUrl}}/api/agenda/bookings/{{directBookingId}}",
             "header": [
               {
                 "key": "Content-Type",
@@ -815,7 +815,7 @@
           "name": "Paciente consulta su episodio",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/episodes/{{episodeId}}",
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}",
             "header": [
               {
                 "key": "X-Access-Reason",
@@ -849,7 +849,7 @@
           "name": "Paciente consulta su receta",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/prescriptions/{{prescriptionId}}",
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}",
             "header": [
               {
                 "key": "X-Access-Reason",
@@ -883,7 +883,7 @@
           "name": "Auditor no puede leer datos clínicos",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/episodes/{{episodeId}}",
+            "url": "{{baseUrl}}/api/episodes/{{episodeId}}",
             "header": [
               {
                 "key": "X-Access-Reason",
@@ -917,7 +917,7 @@
           "name": "Paciente no puede firmar recetas",
           "request": {
             "method": "POST",
-            "url": "{{baseUrl}}/prescriptions/{{prescriptionId}}/sign",
+            "url": "{{baseUrl}}/api/prescriptions/{{prescriptionId}}/sign",
             "header": [],
             "auth": {
               "type": "bearer",

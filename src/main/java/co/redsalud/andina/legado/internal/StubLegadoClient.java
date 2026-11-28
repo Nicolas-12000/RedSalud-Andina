@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile({ "dev", "test" })
+@Profile({ "dev", "test", "postman" })
 class StubLegadoClient implements LegadoClient {
 
 	@Override
