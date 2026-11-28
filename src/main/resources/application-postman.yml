@@ -1,0 +1,8 @@
+# Explicit opt-in for local Postman testing. Keep the normal Cognito profile for deployed environments.
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:9090
+          jwk-set-uri: http://127.0.0.1:9090/jwks.json
